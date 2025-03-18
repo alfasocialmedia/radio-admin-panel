@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - MassRadio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .preview-image {
+            max-width: 200px;
+            height: auto;
+            margin-top: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        body {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1);
+        }
+        .form-label {
+            color: #fff;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #007bff, #00c6ff);
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #00c6ff, #007bff);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        h2 {
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 5px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Panel de Administración - MassRadio</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form id="configForm">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre de la Radio</label>
+                            <input type="text" class="form-control" id="radioName" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">URL del Stream</label>
+                            <input type="url" class="form-control" id="streamUrl" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">URL de la Imagen de Fondo</label>
+                            <input type="url" class="form-control" id="backgroundImageUrl" required>
+                            <img id="imagePreview" class="preview-image" src="" alt="Preview" style="display: none;">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Número de WhatsApp (con código de país)</label>
+                            <input type="text" class="form-control" id="whatsappNumber" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Mensaje de WhatsApp</label>
+                            <textarea class="form-control" id="whatsappMessage" rows="2" required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Texto del Pie de Página</label>
+                            <input type="text" class="form-control" id="footerText" required>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <!-- Firebase -->
+    <script defer src="/__/firebase/11.4.0/firebase-app-compat.js"></script>
+    <script defer src="/__/firebase/11.4.0/firebase-database-compat.js"></script>
+    <script defer src="/__/firebase/init.js?useEmulator=false"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar a que Firebase se inicialice
+            window.addEventListener('load', function() {
+                // Función para mostrar mensajes de estado
+                function showStatusMessage(message, isError = false) {
+                    const statusEl = document.getElementById('statusMessage');
+                    statusEl.textContent = message;
+                    statusEl.style.backgroundColor = isError ? '#dc3545' : '#28a745';
+                    statusEl.style.color = '#fff';
+                    statusEl.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        statusEl.style.display = 'none';
+                    }, 3000);
+                }
+
+                // Cargar configuración actual
+                firebase.database().ref('radioConfig').once('value').then((snapshot) => {
+                    const config = snapshot.val() || {};
+                    document.getElementById('radioName').value = config.radioName || 'MassRadio';
+                    document.getElementById('streamUrl').value = config.streamUrl || 'https://radios.onstreaming.com.ar:8110/radio.mp3';
+                    document.getElementById('backgroundImageUrl').value = config.backgroundImageUrl || '';
+                    document.getElementById('whatsappNumber').value = config.whatsappNumber || '5493755272509';
+                    document.getElementById('whatsappMessage').value = config.whatsappMessage || '¡Estoy escuchando MassRadio en vivo! 🎵🎙️';
+                    document.getElementById('footerText').value = config.footerText || 'Creado por AlfaSocialMedia Arg';
+                    
+                    // Mostrar preview de la imagen
+                    const imagePreview = document.getElementById('imagePreview');
+                    if (config.backgroundImageUrl) {
+                        imagePreview.src = config.backgroundImageUrl;
+                        imagePreview.style.display = 'block';
+                    }
+                }).catch(error => {
+                    showStatusMessage('Error al cargar la configuración: ' + error.message, true);
+                });
+
+                // Preview de imagen
+                document.getElementById('backgroundImageUrl').addEventListener('input', function(e) {
+                    const imagePreview = document.getElementById('imagePreview');
+                    if (e.target.value) {
+                        imagePreview.src = e.target.value;
+                        imagePreview.style.display = 'block';
+                    } else {
+                        imagePreview.style.display = 'none';
+                    }
+                });
+
+                // Manejar envío del formulario
+                document.getElementById('configForm').addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const config = {
+                        radioName: document.getElementById('radioName').value,
+                        streamUrl: document.getElementById('streamUrl').value,
+                        backgroundImageUrl: document.getElementById('backgroundImageUrl').value,
+                        whatsappNumber: document.getElementById('whatsappNumber').value,
+                        whatsappMessage: document.getElementById('whatsappMessage').value,
+                        footerText: document.getElementById('footerText').value
+                    };
+
+                    firebase.database().ref('radioConfig').set(config)
+                        .then(() => {
+                            showStatusMessage('Configuración guardada exitosamente');
+                        })
+                        .catch((error) => {
+                            showStatusMessage('Error al guardar la configuración: ' + error.message, true);
+                        });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
