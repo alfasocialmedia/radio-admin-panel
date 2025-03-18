@@ -1,0 +1,12 @@
+specVersion: "v1beta"
+serviceId: "radio-admin-panel"
+location: "southamerica-east1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "radio-admin-panel-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]
